@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import * as accountsQ from '@/db/queries/accounts'
 import * as itemsQ from '@/db/queries/items'
 import * as monthsQ from '@/db/queries/months'
+import { AppHeader } from '@/components/app-header'
 import { isValidMonthKey } from '@/lib/month-key'
 import { MonthView } from './month-view'
 
@@ -27,13 +28,16 @@ export default async function MonthPage({ params }: PageProps) {
   ])
 
   return (
-    <MonthView
-      monthId={yyyymm}
-      month={month}
-      initialIncomes={incomes}
-      initialExpenses={expenses}
-      activeAccounts={activeAccounts}
-      allAccounts={allAccounts}
-    />
+    <>
+      <AppHeader />
+      <MonthView
+        monthId={yyyymm}
+        month={month}
+        initialIncomes={incomes}
+        initialExpenses={expenses}
+        activeAccounts={activeAccounts}
+        allAccounts={allAccounts}
+      />
+    </>
   )
 }

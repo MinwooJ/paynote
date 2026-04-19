@@ -4,10 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import * as itemsQ from '@/db/queries/items'
 import * as monthsQ from '@/db/queries/months'
+import * as accountsQ from '@/db/queries/accounts'
 import { incomeItemCreateSchema } from '@/lib/validators/income-item'
 import { expenseItemCreateSchema } from '@/lib/validators/expense-item'
 import { monthCloseSchema } from '@/lib/validators/month'
 import { normalizeCategory } from '@/lib/normalize'
+import { cloneItems } from '@/domain/clone-items'
+import { prevMonth, isValidMonthKey } from '@/lib/month-key'
 import type { ExpenseItem, IncomeItem, NewExpenseItem, NewIncomeItem } from '@/db/schema'
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -131,4 +134,67 @@ export async function toggleMonthClosedAction(input: unknown): Promise<Result<vo
   await monthsQ.toggleMonthClosed(parsed.data.id, parsed.data.closed)
   revalidate(parsed.data.id)
   return { ok: true, data: undefined }
+}
+
+// —— Clone previous month ——
+
+export async function clonePreviousMonthAction(
+  monthId: string,
+): Promise<Result<{ cloned: number; skipped: number }>> {
+  if (!isValidMonthKey(monthId)) return { ok: false, error: '잘못된 월 키' }
+  const prev = prevMonth(monthId)
+  const [prevIncomes, prevExpenses, activeAccounts] = await Promise.all([
+    itemsQ.listIncomesByMonth(prev),
+    itemsQ.listExpensesByMonth(prev),
+    accountsQ.listActiveAccounts(),
+  ])
+  if (prevIncomes.length === 0 && prevExpenses.length === 0) {
+    return { ok: false, error: `${prev}에 복제할 항목이 없어요` }
+  }
+
+  await monthsQ.ensureMonth(monthId)
+  const activeIds = new Set(activeAccounts.map((a) => a.id))
+
+  const sourceItems = [
+    ...prevIncomes.map((i) => ({
+      kind: 'income' as const,
+      amount: i.amount,
+      label: i.label,
+      category: null,
+      accountId: i.destinationAccountId,
+    })),
+    ...prevExpenses.map((e) => ({
+      kind: 'expense' as const,
+      amount: e.amount,
+      label: e.label,
+      category: e.category,
+      accountId: e.sourceAccountId,
+    })),
+  ]
+
+  const { cloned, skipped } = cloneItems({ sourceItems, activeAccountIds: activeIds })
+
+  const incomes = cloned
+    .filter((c) => c.kind === 'income')
+    .map((c) => ({
+      monthId,
+      amount: c.amount,
+      label: c.label,
+      destinationAccountId: c.accountId,
+    }))
+  const expenses = cloned
+    .filter((c) => c.kind === 'expense')
+    .map((c) => ({
+      monthId,
+      amount: c.amount,
+      label: c.label,
+      category: c.category,
+      sourceAccountId: c.accountId,
+    }))
+
+  if (incomes.length > 0) await itemsQ.bulkCreateIncomes(incomes)
+  if (expenses.length > 0) await itemsQ.bulkCreateExpenses(expenses)
+
+  revalidate(monthId)
+  return { ok: true, data: { cloned: cloned.length, skipped: skipped.length } }
 }

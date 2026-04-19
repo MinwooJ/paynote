@@ -16,12 +16,15 @@ import { IncomeSection } from './income-section'
 import { ExpenseSection } from './expense-section'
 import { TransferPlanCard } from './transfer-plan-card'
 import {
+  clonePreviousMonthAction,
   deleteExpenseAction,
   deleteIncomeAction,
   restoreExpenseAction,
   restoreIncomeAction,
   toggleMonthClosedAction,
 } from './actions'
+import { Copy } from 'lucide-react'
+import { prevMonth } from '@/lib/month-key'
 
 interface Props {
   monthId: string
@@ -151,19 +154,40 @@ export function MonthView({
     }
   }
 
+  const handleCloneFromPrevious = async () => {
+    const result = await clonePreviousMonthAction(monthId)
+    if (result.ok) {
+      toast.success(
+        `${prevMonth(monthId)}에서 ${result.data.cloned}개 복제됨${result.data.skipped > 0 ? ` (${result.data.skipped}개 스킵)` : ''}`,
+      )
+    } else {
+      toast.error(result.error)
+    }
+  }
+
+  const isEmpty = incomes.length === 0 && expenses.length === 0
+
   return (
     <main className="mx-auto max-w-7xl p-4 pb-24 sm:p-6">
       <header className="mb-6 flex items-center justify-between gap-4">
         <MonthNav monthId={monthId} />
-        <Button
-          variant={isClosed ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={handleToggleClosed}
-          aria-pressed={isClosed}
-        >
-          <Check className="h-4 w-4" />
-          {isClosed ? '확인 완료 ✓' : '이번 달 확인 완료'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isEmpty && (
+            <Button size="sm" variant="outline" onClick={handleCloneFromPrevious}>
+              <Copy className="h-4 w-4" />
+              지난 달 복제
+            </Button>
+          )}
+          <Button
+            variant={isClosed ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={handleToggleClosed}
+            aria-pressed={isClosed}
+          >
+            <Check className="h-4 w-4" />
+            {isClosed ? '확인 완료 ✓' : '이번 달 확인 완료'}
+          </Button>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
