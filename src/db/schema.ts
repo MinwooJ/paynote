@@ -2,12 +2,12 @@ import { sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 /**
- * 모든 금액은 원 단위 정수(KRW). ADR-0003.
+ * 금액은 원 단위 정수(KRW). ADR-0003.
  * 월 키는 'YYYY-MM' 문자열. ADR-0004.
- * audit timestamps는 unixepoch() 디폴트 + $onUpdate. ADR-0005 관련.
+ * audit timestamps는 unixepoch() 디폴트 + $onUpdate.
  */
 
-// Accounts — 통장
+// Accounts
 export const accounts = sqliteTable(
   'accounts',
   {
@@ -17,7 +17,6 @@ export const accounts = sqliteTable(
       .notNull()
       .default('spending'),
     openingBalance: integer('opening_balance').notNull().default(0),
-    /** 'YYYY-MM' — 이 달의 1일 00시 기준 잔액이 openingBalance */
     openingBalanceAsOfMonth: text('opening_balance_as_of_month').notNull(),
     archivedAt: integer('archived_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -28,13 +27,12 @@ export const accounts = sqliteTable(
       .default(sql`(unixepoch())`)
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    // savings 역할은 한 번에 하나만 (active 중에서)
-    uniqueIndex('accounts_savings_unique_idx')
+  (t) => ({
+    savingsUnique: uniqueIndex('accounts_savings_unique_idx')
       .on(t.role)
       .where(sql`${t.archivedAt} IS NULL AND ${t.role} = 'savings'`),
-    index('accounts_archived_idx').on(t.archivedAt),
-  ],
+    archivedIdx: index('accounts_archived_idx').on(t.archivedAt),
+  }),
 )
 
 // Months — 'YYYY-MM' 문자열 PK
@@ -43,16 +41,17 @@ export const months = sqliteTable(
   {
     id: text('id', { length: 7 }).primaryKey().notNull(),
     note: text('note'),
-    /** 사용자 "확인 완료" 소프트 플래그. 편집 막지 않음. */
     closedAt: integer('closed_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (t) => [index('months_closed_idx').on(t.closedAt)],
+  (t) => ({
+    closedIdx: index('months_closed_idx').on(t.closedAt),
+  }),
 )
 
-// IncomeItems — 수입 항목
+// IncomeItems
 export const incomeItems = sqliteTable(
   'income_items',
   {
@@ -60,7 +59,7 @@ export const incomeItems = sqliteTable(
     monthId: text('month_id')
       .notNull()
       .references(() => months.id, { onDelete: 'cascade' }),
-    amount: integer('amount').notNull(), // > 0 (zod에서 강제)
+    amount: integer('amount').notNull(),
     label: text('label').notNull(),
     destinationAccountId: integer('destination_account_id')
       .notNull()
@@ -73,13 +72,13 @@ export const incomeItems = sqliteTable(
       .default(sql`(unixepoch())`)
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index('income_month_idx').on(t.monthId),
-    index('income_account_idx').on(t.destinationAccountId),
-  ],
+  (t) => ({
+    monthIdx: index('income_month_idx').on(t.monthId),
+    accountIdx: index('income_account_idx').on(t.destinationAccountId),
+  }),
 )
 
-// ExpenseItems — 지출 항목
+// ExpenseItems
 export const expenseItems = sqliteTable(
   'expense_items',
   {
@@ -101,14 +100,14 @@ export const expenseItems = sqliteTable(
       .default(sql`(unixepoch())`)
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index('expense_month_idx').on(t.monthId),
-    index('expense_account_idx').on(t.sourceAccountId),
-    index('expense_category_idx').on(t.category),
-  ],
+  (t) => ({
+    monthIdx: index('expense_month_idx').on(t.monthId),
+    accountIdx: index('expense_account_idx').on(t.sourceAccountId),
+    categoryIdx: index('expense_category_idx').on(t.category),
+  }),
 )
 
-// FixedTemplates — 고정지출 프리셋
+// FixedTemplates
 export const fixedTemplates = sqliteTable('fixed_templates', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
@@ -136,7 +135,9 @@ export const fixedTemplateItems = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: 'restrict' }),
   },
-  (t) => [index('template_items_template_idx').on(t.templateId)],
+  (t) => ({
+    templateIdx: index('template_items_template_idx').on(t.templateId),
+  }),
 )
 
 // 타입 export
