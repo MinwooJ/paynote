@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './globals.css'
+import { Toaster } from '@/components/ui/toaster'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export const metadata: Metadata = {
   title: 'paynote',
@@ -14,10 +16,27 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 }
 
+const themeInitScript = `
+try {
+  var t = localStorage.getItem('paynote-theme') || 'system';
+  var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+} catch (e) {}
+`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className="min-h-dvh bg-background text-foreground antialiased">{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-dvh bg-background text-foreground antialiased">
+        <div className="absolute right-4 top-4 z-50">
+          <ThemeToggle />
+        </div>
+        {children}
+        <Toaster />
+      </body>
     </html>
   )
 }

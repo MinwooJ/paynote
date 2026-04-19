@@ -1,8 +1,11 @@
-export default function HomePage() {
-  return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-3xl font-semibold tracking-tight">paynote</h1>
-      <p className="mt-2 text-muted-foreground">Phase 0 — scaffold is up.</p>
-    </main>
-  )
+import { redirect } from 'next/navigation'
+import * as accountsQ from '@/db/queries/accounts'
+import { currentMonthKey } from '@/lib/month-key'
+
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const has = await accountsQ.hasAnyAccount()
+  if (!has) redirect('/onboarding')
+  redirect(`/months/${currentMonthKey()}`)
 }
