@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AmountInput } from '@/components/amount-input'
+import { currentMonthKey, isValidMonthKey } from '@/lib/month-key'
 import { completeOnboarding } from './actions'
 
 const BANK_PRESETS = [
@@ -38,13 +39,15 @@ export function OnboardingForm() {
     { name: '국민은행', role: 'spending', openingBalance: null },
     { name: '카카오뱅크', role: 'savings', openingBalance: null },
   ])
+  const [startMonth, setStartMonth] = React.useState<string>(() => currentMonthKey())
   const [pending, startTransition] = React.useTransition()
 
   const savingsCount = drafts.filter((d) => d.role === 'savings').length
   const canSubmit =
     drafts.length > 0 &&
     drafts.every((d) => d.name.trim().length > 0) &&
-    savingsCount === 1
+    savingsCount === 1 &&
+    isValidMonthKey(startMonth)
 
   const update = (idx: number, patch: Partial<DraftAccount>) => {
     setDrafts((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)))
@@ -73,6 +76,7 @@ export function OnboardingForm() {
             role: d.role,
             openingBalance: d.openingBalance ?? 0,
           })),
+          openingBalanceAsOfMonth: startMonth,
         },
       )
       if (result.ok === false) {
@@ -89,6 +93,25 @@ export function OnboardingForm() {
       }}
       className="space-y-6"
     >
+      <Card>
+        <CardHeader>
+          <CardTitle>기록 시작 월</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            어느 달부터 기록할지 선택해주세요. 입력한 &ldquo;현재 잔액&rdquo;은 이 달의 1일 기준으로 적용됩니다.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label htmlFor="start-month">시작 월</Label>
+          <Input
+            id="start-month"
+            type="month"
+            value={startMonth}
+            onChange={(e) => setStartMonth(e.target.value)}
+            max={currentMonthKey()}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>통장 등록</CardTitle>

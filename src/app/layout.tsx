@@ -3,17 +3,31 @@ import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { SWRegister } from '@/components/sw-register'
 
 export const metadata: Metadata = {
   title: 'paynote',
   description: '개인용 월별 가계 기록',
-  icons: { icon: '/favicon.ico' },
+  applicationName: 'paynote',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'paynote',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
   colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#121418' },
+  ],
 }
 
 const themeInitScript = `
@@ -36,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         {children}
         <Toaster />
+        <SWRegister />
       </body>
     </html>
   )

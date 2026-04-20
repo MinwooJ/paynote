@@ -1,39 +1,34 @@
 import { redirect } from 'next/navigation'
 import * as accountsQ from '@/db/queries/accounts'
 import * as itemsQ from '@/db/queries/items'
+import * as monthsQ from '@/db/queries/months'
 import { AppHeader } from '@/components/app-header'
-import { currentMonthKey, monthRange, prevMonth } from '@/lib/month-key'
+import { currentMonthKey } from '@/lib/month-key'
 import { StatsView } from './stats-view'
 
 export const dynamic = 'force-dynamic'
-
-const DEFAULT_MONTHS_BACK = 24
-
-function shiftBack(key: string, n: number): string {
-  let cur = key
-  for (let i = 0; i < n; i++) cur = prevMonth(cur)
-  return cur
-}
 
 export default async function StatsPage() {
   const hasAny = await accountsQ.hasAnyAccount()
   if (!hasAny) redirect('/onboarding')
 
-  const to = currentMonthKey()
-  const from = shiftBack(to, DEFAULT_MONTHS_BACK - 1)
-  const ids = monthRange(from, to)
+  const allMonths = await monthsQ.listMonthsAsc()
+  const earliest = allMonths[0]?.id ?? currentMonthKey()
+  const latest = allMonths[allMonths.length - 1]?.id ?? currentMonthKey()
 
+  const monthIds = allMonths.map((m) => m.id)
   const [incomes, expenses] = await Promise.all([
-    itemsQ.listIncomesForMonths(ids),
-    itemsQ.listExpensesForMonths(ids),
+    itemsQ.listIncomesForMonths(monthIds),
+    itemsQ.listExpensesForMonths(monthIds),
   ])
 
   return (
     <>
       <AppHeader />
       <StatsView
-        from={from}
-        to={to}
+        earliest={earliest}
+        latest={latest}
+        today={currentMonthKey()}
         incomes={incomes.map((i) => ({ monthId: i.monthId, amount: i.amount }))}
         expenses={expenses.map((e) => ({
           monthId: e.monthId,

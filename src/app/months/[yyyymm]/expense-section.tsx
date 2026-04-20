@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Account, ExpenseItem } from '@/db/schema'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { AmountInput } from '@/components/amount-input'
 import { formatKRW } from '@/lib/currency'
-import { addExpenseAction } from './actions'
+import { addExpenseAction, updateExpenseAction } from './actions'
 
 interface Props {
   monthId: string
@@ -23,7 +23,7 @@ interface Props {
 export function ExpenseSection({ monthId, items, activeAccounts, accountsById, onDelete }: Props) {
   const [showAdd, setShowAdd] = React.useState(false)
 
-  const recentCategories = React.useMemo(() => {
+  const categoryHints = React.useMemo(() => {
     const set = new Set<string>()
     for (const it of items) if (it.category) set.add(it.category)
     return Array.from(set)
@@ -40,11 +40,12 @@ export function ExpenseSection({ monthId, items, activeAccounts, accountsById, o
       </CardHeader>
       <CardContent className="space-y-2">
         {showAdd && (
-          <AddExpenseForm
+          <ExpenseFormRow
             monthId={monthId}
             activeAccounts={activeAccounts}
-            categoryHints={recentCategories}
-            onSuccess={() => setShowAdd(false)}
+            categoryHints={categoryHints}
+            onDone={() => setShowAdd(false)}
+            mode="create"
           />
         )}
 
@@ -54,59 +55,109 @@ export function ExpenseSection({ monthId, items, activeAccounts, accountsById, o
           </p>
         )}
 
-        {items.map((item) => {
-          const account = accountsById.get(item.sourceAccountId)
-          return (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 rounded-md border border-border/50 px-3 py-2 hover:bg-accent/50"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{item.label}</span>
-                  {item.category && (
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      {item.category}
-                    </span>
-                  )}
-                </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  ← {account?.name ?? '(보관된 통장)'}
-                </div>
-              </div>
-              <div className="amount text-sm font-medium">{formatKRW(item.amount)}</div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDelete(item)}
-                aria-label="삭제"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )
-        })}
+        {items.map((item) => (
+          <ExpenseRow
+            key={item.id}
+            item={item}
+            activeAccounts={activeAccounts}
+            accountsById={accountsById}
+            categoryHints={categoryHints}
+            onDelete={onDelete}
+          />
+        ))}
       </CardContent>
     </Card>
   )
 }
 
-function AddExpenseForm({
-  monthId,
+function ExpenseRow({
+  item,
   activeAccounts,
+  accountsById,
   categoryHints,
-  onSuccess,
+  onDelete,
 }: {
+  item: ExpenseItem
+  activeAccounts: Account[]
+  accountsById: Map<number, Account>
+  categoryHints: string[]
+  onDelete: (item: ExpenseItem) => void
+}) {
+  const [editing, setEditing] = React.useState(false)
+
+  if (editing) {
+    return (
+      <ExpenseFormRow
+        monthId={item.monthId}
+        activeAccounts={activeAccounts}
+        categoryHints={categoryHints}
+        onDone={() => setEditing(false)}
+        mode="edit"
+        initial={item}
+      />
+    )
+  }
+
+  const account = accountsById.get(item.sourceAccountId)
+  return (
+    <div className="flex items-center gap-3 rounded-md border border-border/50 px-3 py-2 hover:bg-accent/50">
+      <div
+        className="flex-1 min-w-0 cursor-pointer"
+        onClick={() => setEditing(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setEditing(true)
+          }
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{item.label}</span>
+          {item.category && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {item.category}
+            </span>
+          )}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          ← {account?.name ?? '(보관된 통장)'}
+        </div>
+      </div>
+      <div className="amount text-sm font-medium">{formatKRW(item.amount)}</div>
+      <Button variant="ghost" size="icon" onClick={() => setEditing(true)} aria-label="편집">
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => onDelete(item)} aria-label="삭제">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+interface FormProps {
   monthId: string
   activeAccounts: Account[]
   categoryHints: string[]
-  onSuccess: () => void
-}) {
-  const [label, setLabel] = React.useState('')
-  const [amount, setAmount] = React.useState<number | null>(null)
-  const [category, setCategory] = React.useState('')
+  onDone: () => void
+  mode: 'create' | 'edit'
+  initial?: ExpenseItem
+}
+
+function ExpenseFormRow({
+  monthId,
+  activeAccounts,
+  categoryHints,
+  onDone,
+  mode,
+  initial,
+}: FormProps) {
+  const [label, setLabel] = React.useState(initial?.label ?? '')
+  const [amount, setAmount] = React.useState<number | null>(initial?.amount ?? null)
+  const [category, setCategory] = React.useState(initial?.category ?? '')
   const [accountId, setAccountId] = React.useState<number | null>(
-    activeAccounts[0]?.id ?? null,
+    initial?.sourceAccountId ?? activeAccounts[0]?.id ?? null,
   )
   const [pending, startTransition] = React.useTransition()
 
@@ -115,23 +166,41 @@ function AddExpenseForm({
   const submit = () => {
     if (!canSubmit) return
     startTransition(async () => {
-      const result = await addExpenseAction({
+      const payload = {
         monthId,
         amount,
         label: label.trim(),
         category: category.trim() === '' ? null : category.trim(),
         sourceAccountId: accountId,
-      })
-      if (result.ok) {
-        toast.success('추가되었어요')
-        setLabel('')
-        setAmount(null)
-        setCategory('')
-        onSuccess()
-      } else {
-        toast.error(result.error)
+      }
+      if (mode === 'create') {
+        const result = await addExpenseAction(payload)
+        if (result.ok) {
+          toast.success('추가되었어요')
+          onDone()
+        } else {
+          toast.error(result.error)
+        }
+      } else if (initial) {
+        const result = await updateExpenseAction({ id: initial.id, ...payload })
+        if (result.ok) {
+          toast.success('수정되었어요')
+          onDone()
+        } else {
+          toast.error(result.error)
+        }
       }
     })
+  }
+
+  const onEnter = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      submit()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      onDone()
+    }
   }
 
   return (
@@ -141,23 +210,21 @@ function AddExpenseForm({
           placeholder="항목 이름 (예: 월세)"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              submit()
-            }
-          }}
+          onKeyDown={onEnter}
+          autoFocus
         />
         <AmountInput
           value={amount}
           onValueChange={setAmount}
           placeholder="금액"
+          onKeyDown={onEnter}
         />
         <Input
           placeholder="카테고리 (선택)"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           list="expense-category-hints"
+          onKeyDown={onEnter}
         />
         <datalist id="expense-category-hints">
           {categoryHints.map((c) => (
@@ -168,6 +235,7 @@ function AddExpenseForm({
           value={accountId ?? ''}
           onChange={(e) => setAccountId(Number(e.target.value))}
           aria-label="출금 통장"
+          onKeyDown={onEnter}
         >
           {activeAccounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -175,9 +243,15 @@ function AddExpenseForm({
             </option>
           ))}
         </Select>
-        <Button onClick={submit} disabled={!canSubmit || pending}>
-          {pending ? '저장 중…' : '추가'}
-        </Button>
+        <div className="flex gap-1">
+          <Button onClick={submit} disabled={!canSubmit || pending} size="sm">
+            <Check className="h-4 w-4" />
+            {pending ? '저장 중…' : mode === 'create' ? '추가' : '저장'}
+          </Button>
+          <Button variant="ghost" onClick={onDone} size="sm" aria-label="취소">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )
