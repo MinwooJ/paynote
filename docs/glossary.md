@@ -59,6 +59,8 @@ paynote 고유 용어집. **코드만 봐서는 알 수 없는** 개념을 여�
 - **Toast undo**: 파괴적 동작 후 5초간 "되돌리기" 링크를 포함한 토스트. 재확인 다이얼로그 대체 (ADR-0007).
 - **Savings rate (저축률)**: `netBalance / totalIncome × 100` (%). 통계 대시보드의 핵심 지표.
 - **Annual rollup (올해 누적 저축)**: 해당 연도의 월별 TransferPlan sweep 금액 합. 현재 savings 통장 기준.
+- **Year summary (연도별 합계)**: 통계 범위 내 연도별 수입·지출·순잔액·저축률·기록 개월 수 표. 여러 해 비교·연말정산 용도.
+- **Custom range**: 통계 "직접 지정" 모드. 두 개의 `<input type="month">`로 from·to를 선택. from > to면 자동 swap.
 - **Rebase (opening balance)**: 드리프트 해소를 위해 `openingBalance`/`openingBalanceAsOfMonth`를 현재 실잔액으로 재설정하는 사용자 동작. 설정 > 통장 관리에서 제공.
 - **Inline edit**: 테이블 행을 클릭해 그 자리에서 편집. 별도 모달 없음.
 - **Live summary**: 입력 폼 옆 요약 패널. 타이핑과 동시에 합계·TransferPlan 갱신. 낙관적 업데이트.

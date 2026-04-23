@@ -109,7 +109,9 @@ UX 원칙에 따라 단순 추이 이상의 맥락 지표를 우선.
 - **지출 TOP 5**: 범위 내 최대 금액 항목 5개. 이상치(표준편차 ±2 초과) 뱃지.
 - **통장별 월간 순변동 막대**: 해당 월의 accountDelta.
 
-범위 토글: `6개월 / 12개월 / 24개월 / 전체`.
+범위 토글: `6개월 / 12개월 / 24개월 / 올해 / 작년 / 전체 / 직접 지정` (마지막은 from·to 월 피커).
+
+추가로 **연도별 합계 표**: 선택 범위의 연도마다 수입·지출·순잔액·저축률·기록 개월 수를 행으로 표시. 여러 해를 한눈에 비교.
 
 ## 데이터 흐름
 
@@ -301,7 +303,7 @@ for each spending account A (role='spending', not archived):
 - **자동 백업**: `pnpm dev` 기동 시 `paynote.db`를 `paynote.db.bak-YYYY-MM-DD`로 스냅샷 복사. 최근 7개만 유지, 나머지 삭제.
 - **마이그레이션 전 백업**: `pnpm db:migrate`가 자동으로 `paynote.db.premigrate-<timestamp>` 생성.
 - **수동 내보내기**: `pnpm db:export`가 JSON 전체 덤프를 `exports/YYYY-MM-DD.json`에 저장. 이관·보관·클라우드 업로드 시 사용.
-- **복구**: 문서 `docs/ops/restore.md`에 "백업 파일을 paynote.db로 교체 → pnpm db:migrate" 절차 기재(Phase 2).
+- **복구**: 백업 파일을 `paynote.db`로 덮어쓴 뒤 `pnpm db:migrate` 실행.
 
 ## 스키마 마이그레이션
 

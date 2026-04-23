@@ -69,4 +69,8 @@ pnpm dev           # http://localhost:3000
 
 ## 상태
 
-초기 설계 단계. 구현 전에 도메인 모델과 기술 결정을 문서로 고정 중.
+- **MVP 구현 완료** — 7개 라우트(`/`, `/onboarding`, `/months/[yyyymm]`, `/stats`, `/accounts`, `/templates`, `/settings`) 모두 동작
+- **PWA 지원** — Dock / 홈 화면 설치 가능 (manifest + service worker + 192/512 아이콘)
+- **테스트** — 도메인 91 케이스 100% 통과, 커밋마다 husky pre-commit로 강제
+- **로컬 실행**: `pnpm dev` (개발) 또는 `pnpm build && pnpm start` (PWA 설치용)
+- 데이터는 `paynote.db`에만 저장 — iCloud Drive 동기화 폴더 아래 배치 권장
