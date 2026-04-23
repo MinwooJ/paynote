@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import { currentMonthKey } from '@/lib/month-key'
+import { ThemeToggle } from './theme-toggle'
 
 export function AppHeader() {
   const monthHref = `/months/${currentMonthKey()}`
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="font-semibold tracking-tight">
           paynote
         </Link>
-        <nav aria-label="주 메뉴">
+        <nav aria-label="주 메뉴" className="flex-1 overflow-x-auto">
           <ul className="flex gap-5 text-sm text-muted-foreground">
             <li>
               <Link href={monthHref} className="hover:text-foreground">
@@ -38,6 +39,7 @@ export function AppHeader() {
             </li>
           </ul>
         </nav>
+        <ThemeToggle />
       </div>
     </header>
   )

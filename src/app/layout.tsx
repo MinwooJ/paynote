@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { SWRegister } from '@/components/sw-register'
 
 export const metadata: Metadata = {
@@ -45,9 +44,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
-        <div className="absolute right-4 top-4 z-50">
-          <ThemeToggle />
-        </div>
         {children}
         <Toaster />
         <SWRegister />
